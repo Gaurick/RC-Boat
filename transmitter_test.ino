@@ -31,11 +31,12 @@
 //set the pin for the built in led.
 #define buzzer 16
 //pin for the buzzer.
+//need to either setup a buzzer and the stuff to signal driver when either the receiver or transmitter
+//battery is low and/or if the boat gets out of transmission range.
 #define pot 18
 //pin for the potentiometer.
 #define button 19
 //pin for the button.
-
 
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
 //create the radio object.
@@ -54,12 +55,12 @@ int oldSpeed = 45;
 int txNum= 0;
 //variable to count the number of transmissions.
 
-void setup(){
+void setup() {
   pinMode(LED, OUTPUT);
   pinMode(buzzer, OUTPUT);
   pinMode(RFM95_RST, OUTPUT);
-  pinMode(button, INPUT_PULLUP);
-  //turn pins to outputs as necessary.
+  pinMode(button, INPUT);
+  //turn pins to outputs or inputs as necessary.
 
   digitalWrite(RFM95_RST, HIGH);
   //turn on the radio.
@@ -72,28 +73,42 @@ void setup(){
   //scale is 5 to 23, with 5 being the weakest, 23 being the strongest.
   Serial.begin(9600);
   //start the serial thing for messages.
+
 }
 
-void loop(){
-  if(y == 500000){
-    readSensors();
-    txing();
-    rxing();
+void loop() {
+  readSensors();
+  if(y == 10000){
+    //temporary way to not spam transmitions slowed down so i can read stuff.
+    //need to replace the "y" countdown with something fancy to check if the reading 
+    //is different from the previous reading +/- a threshold so it doesn't spam or miss
+    //a turn.
     y = 0;
+    TXing();
   }
 
   else{
-    //readSensors();
     y++;
-    //Serial.print("y-"); Serial.println(y);
-    //counter thing to make sure it's still working while working on the transmitter.
   }
 
-  buzzing();
 }
 
-void txing(){
-  digitalWrite(LED, HIGH);
+void readSensors(){
+  steering = (analogRead(pot)) / 4;
+  //pot reading is 0-1024, H-bridge chip can only handle 0-256, hence the division by 4.
+  if(digitalRead(button) == HIGH){
+    speeds = 99;
+    //if the reverse button is pushed, let the receiver know.
+  }
+
+  else{
+    speeds = 11;
+    //if the reverse button isn't pushed, then set the speed at the neutral (forward) "speed".
+  }
+}
+
+void TXing(){
+    digitalWrite(LED, HIGH);
   //turn on the light.  
   
   uint8_t radioPacket[9];
@@ -134,15 +149,18 @@ void txing(){
   //send the message.
   rf95.waitPacketSent();
   //wait for the message to finish sending.
+
+  RXing();
 }
 
-void rxing(){
+void RXing(){
   uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
   uint8_t len = sizeof(buf);
   //make a buffer for the reply.
 
   if(rf95.waitAvailableTimeout(1000)){
     if(rf95.recv(buf, &len)){
+      //wait for a bit then hopefully receive a reply from the receiver.
       Serial.print("received data:");
       for(int b = 0; b < 6; b ++){
         Serial.print(buf [b]);
@@ -157,11 +175,13 @@ void rxing(){
     }
 
     else{
+      //if the reply is received, but doesn't work, say something.
       Serial.println("receive failure");
     }
   }
 
   else{
+    //if there's no reply from the receiver before the timeout, say something.
     Serial.println("No reply");
   }
 
@@ -169,44 +189,5 @@ void rxing(){
   //turn off the built in led.
 
   txNum ++;
-}
-
-void readSensors(){
-  steering = analogRead(pot);
-
-  if(digitalRead(button) == LOW){
-    speeds = 99;
-  }
-
-  else{
-    speeds = 11;
-  }
-
-  if(steering != oldSteering){
-    oldSteering = steering;
-    txing();
-  }
-
-  if(speeds != oldSpeed){
-    oldSpeed = speeds;
-    txing();
-  }
-}
-
-void buzzing(){
-  //no signal
-  //-15 to -100
-  //larger number is stronger
-  //-15 probably strongest
-  //-70 is a good warning level
-
-  //low boat battery
-  //low transmitter battery
-  //4.2v max
-  //3.7v “normal”
-  //3.2v low power safety cut off
-  
-  //digitalWrite(buzzer, HIGH);
-  digitalWrite(buzzer, LOW);
-
+  //having received a reply, increase the transmission number.
 }
