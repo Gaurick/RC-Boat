@@ -33,8 +33,10 @@
 //pin for the buzzer.
 //need to either setup a buzzer and the stuff to signal driver when either the receiver or transmitter
 //battery is low and/or if the boat gets out of transmission range.
-#define pot 18
-//pin for the potentiometer.
+#define speeding A1
+//pin for the speed potentiometer.
+#define steering A0
+//pin for the steering potentiometer.
 #define button 19
 //pin for the button.
 
@@ -44,14 +46,10 @@ RH_RF95 rf95(RFM95_CS, RFM95_INT);
 
 long y = 0;
 //create variable for counting the loops.
-int steering = 123;
+int steeringReading = 123;
 //variable for first set of data.
-int oldSteering = 123;
-//variable to check if any steering has happened.
-int speeds = 45;
+int speedingReading = 45;
 //variable for second set of data.
-int oldSpeed = 45;
-//variable to check to see if the speed has changed.
 int txNum= 0;
 //variable to count the number of transmissions.
 
@@ -82,7 +80,7 @@ void loop() {
     //temporary way to not spam transmitions slowed down so i can read stuff.
     //need to replace the "y" countdown with something fancy to check if the reading 
     //is different from the previous reading +/- a threshold so it doesn't spam or miss
-    //a turn.
+    //a turn or change of speed.
     y = 0;
     TXing();
   }
@@ -94,48 +92,48 @@ void loop() {
 }
 
 void readSensors(){
-  steering = (analogRead(pot)) / 4;
+  steeringReading = (analogRead(steering)) / 4;
   //pot reading is 0-1024, H-bridge chip can only handle 0-256, hence the division by 4.
-  if(digitalRead(button) == HIGH){
-    speeds = 99;
-    //if the reverse button is pushed, let the receiver know.
-  }
+  speedingReading = (analogRead(speeding)) / 4;
 
-  else{
-    speeds = 11;
-    //if the reverse button isn't pushed, then set the speed at the neutral (forward) "speed".
-  }
+  Serial.print("steering-"); Serial.print(steeringReading);
+  Serial.print(" speed-"); Serial.println(speedingReading);
 }
 
 void TXing(){
-    digitalWrite(LED, HIGH);
+  digitalWrite(LED, HIGH);
   //turn on the light.  
   
-  uint8_t radioPacket[9];
+  uint8_t radioPacket[10];
   //variable for the transmission.
   //steering, speed, txNum
+  int oldSteering = steeringReading;
+  int oldSpeeding = speedingReading;
+  //variables to 
 
-  radioPacket [0] = steering / 100;
-  steering = steering - (radioPacket [0] * 100);
-  radioPacket [1] = steering / 10;
-  steering = steering - (radioPacket [1] * 10);
-  radioPacket [2] = steering;
+  radioPacket [0] = oldSteering / 100;
+  oldSteering = oldSteering - (radioPacket [0] * 100);
+  radioPacket [1] = oldSteering / 10;
+  oldSteering = oldSteering - (radioPacket [1] * 10);
+  radioPacket [2] = oldSteering;
   //break up the steering variable into pieces and put it into the radio transmission array.
-  
-  radioPacket [3] = speeds / 10;
-  speeds = speeds - (radioPacket [3] * 10);
-  radioPacket [4] = speeds;
+
+  radioPacket [3] = oldSpeeding / 100;
+  oldSpeeding = oldSpeeding - (radioPacket [3] * 100);
+  radioPacket [4] = oldSpeeding / 10;
+  oldSpeeding = oldSpeeding - (radioPacket [3] * 10);
+  radioPacket [5] = oldSpeeding;
   // break up the speed variable and put it into the radio transmission array.
   
-  radioPacket [5] = txNum / 1000;
+  radioPacket [6] = txNum / 1000;
   txNum = txNum - (radioPacket [5] * 1000);
-  radioPacket [6] = txNum / 100;
+  radioPacket [7] = txNum / 100;
   txNum = txNum - (radioPacket [6] * 100);
-  radioPacket [7] = txNum / 10;
+  radioPacket [8] = txNum / 10;
   txNum = txNum - (radioPacket [7] * 10);
-  radioPacket [8] = txNum;
+  radioPacket [9] = txNum;
   //break up the transmission number and sort it into the transmission array.
-  txNum = (radioPacket [5] * 1000) + (radioPacket [6] * 100) + (radioPacket [7] * 10) + radioPacket [8];
+  txNum = (radioPacket [6] * 1000) + (radioPacket [7] * 100) + (radioPacket [8] * 10) + radioPacket [9];
   //put the txNum back the way it was.
   Serial.print("txNum-"); Serial.println(txNum); Serial.println(" ");
 
@@ -145,7 +143,7 @@ void TXing(){
   }
   Serial.println(" ");
 
-  rf95.send(radioPacket, 9);
+  rf95.send(radioPacket, 10);
   //send the message.
   rf95.waitPacketSent();
   //wait for the message to finish sending.
