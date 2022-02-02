@@ -28,6 +28,15 @@ int speeds = 0;
 int txNum= 0;
 //variable to count the number of transmittions.
 
+int en1 = 5;
+int en2 = 6;
+//pins that set the speed based on the analog reading.  needs to be between 0 and 255.
+int in1 = 10;
+int in2 = 11;
+int in3 = 12;
+int in4 = 13;
+//determines the direction of spin on the motor.
+
 uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
 uint8_t len = sizeof(buf);
 //create a buffer and a variable based on the size of the buffer.
@@ -61,6 +70,7 @@ void loop(){
         
         rxSort();
         batteryCheck();
+        motoring();
         rxReply();
 
         Serial.print("RSSI: ");
@@ -79,6 +89,7 @@ void loop(){
 }
 
 void rxSort(){
+  //after receiving the signal from the transmitter sort it out so it can be used to do stuff.
   steering = buf [0] * 100;
   steering = steering + (buf [1] * 10);
   steering = steering + buf [2];
@@ -96,6 +107,7 @@ void rxSort(){
 }
 
 void batteryCheck(){
+  //function to check the battery level for the microcontroller.
   measuredVbat = analogRead(VBATPIN);
   //measure the battery voltage.
 
@@ -111,7 +123,19 @@ void batteryCheck(){
   //print out the results.
 }
 
+void motoring(){
+  //function to make the motor move.
+  analogWrite(en1, 0);
+  digitalWrite(in1, 0);
+  digitalWrite(in2, 0);
+
+  analogWrite(en2, 0);
+  digitalWrite(in3, 0);
+  digitalWrite(in4, 0);
+}
+
 void rxReply(){
+  //funcction to reply to the transmitter to let it know that the transmission was received.
   uint8_t radioPacket [6];
   //variable for the data to be sent out.
   
