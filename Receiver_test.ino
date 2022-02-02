@@ -2,6 +2,7 @@
 
 #include <SPI.h>
 #include <RH_RF95.h>
+#include <Adafruit_NeoPixel.h>
 //libraries to make everything work.
 
 #define RFM95_CS 8
@@ -14,6 +15,18 @@
 //set the pin for the built in led.
 #define VBATPIN A7
 //pin to read the battery voltage.
+
+#define en1 5
+#define en2 6
+//pins that set the speed based on the analog reading.  needs to be between 0 and 255.
+#define in1 10
+#define in2 11
+#define in3 12
+#define in4 13
+//determines the direction of spin on the motor.
+
+#define pixelPin A2
+//pin for the neopixel to "talk" to the driver.
 
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
 //create the radio object.
@@ -28,14 +41,8 @@ int speeds = 0;
 int txNum= 0;
 //variable to count the number of transmittions.
 
-int en1 = 5;
-int en2 = 6;
-//pins that set the speed based on the analog reading.  needs to be between 0 and 255.
-int in1 = 10;
-int in2 = 11;
-int in3 = 12;
-int in4 = 13;
-//determines the direction of spin on the motor.
+Adafruit_NeoPixel pixels(1, pixelPin, NEO_GRB + NEO_KHZ800);
+//creates the pixels object.
 
 uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
 uint8_t len = sizeof(buf);
@@ -132,6 +139,11 @@ void motoring(){
   analogWrite(en2, 0);
   digitalWrite(in3, 0);
   digitalWrite(in4, 0);
+
+  pixels.setPixelColor(0, 255, 255, 255);
+  //pick the pixel then set the color.
+  pixels.show();
+  //actually make the pixel show the color specified.
 }
 
 void rxReply(){
