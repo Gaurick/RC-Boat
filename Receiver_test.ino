@@ -161,16 +161,16 @@ void setMotor(int receivedSteering, int receivedSpeed){
 
   if(receivedSpeed < 127){
     //if the speed is above 127, it should be in reverse.
-    analogWrite(en2, ((127 - receivedSpeed) * 2);
+    analogWrite(en2, ((127 - receivedSpeed) * 2));
     //inverse the reading, so that it slows down as you get to the middle of the pot, then hopefully stops.
     //also double it since you're only using 1/2 of the pot for reverse.
     digitalWrite(in3, 1);
     digitalWrite(in4, 0);
   }
 
-  if(recievedSpeed > 127){
+  if(receivedSpeed > 127){
     //if the speed is above 127, it should be forward.
-    analogWrite(en, ((receivedSpeed - 127) * 2);
+    analogWrite(en2, ((receivedSpeed - 127) * 2));
     //so we take the speed, remove the reverse part of the reading, then double it since only 1/2 of the 
     //pot range is dedicated to the forward speed.
     digitalWrite(in3, 0);
