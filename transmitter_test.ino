@@ -29,16 +29,10 @@
 //set the frequency to transmit and receive on.
 #define LED 13
 //set the pin for the built in led.
-#define buzzer 16
-//pin for the buzzer.
-//need to either setup a buzzer and the stuff to signal driver when either the receiver or transmitter
-//battery is low and/or if the boat gets out of transmission range.
 #define speeding A1
 //pin for the speed potentiometer.
 #define steering A0
 //pin for the steering potentiometer.
-#define button 19
-//pin for the button.
 
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
 //create the radio object.
@@ -50,14 +44,16 @@ int steeringReading = 123;
 //variable for first set of data.
 int speedingReading = 45;
 //variable for second set of data.
+int oldSteering = 0;
+//old steering reading to see if it's changed.
+int oldSpeeding = 0;
+//old speeding reading to see if it's changes.
 int txNum= 0;
 //variable to count the number of transmissions.
 
 void setup() {
   pinMode(LED, OUTPUT);
-  pinMode(buzzer, OUTPUT);
   pinMode(RFM95_RST, OUTPUT);
-  pinMode(button, INPUT);
   //turn pins to outputs or inputs as necessary.
 
   digitalWrite(RFM95_RST, HIGH);
@@ -71,44 +67,78 @@ void setup() {
   //scale is 5 to 23, with 5 being the weakest, 23 being the strongest.
   Serial.begin(9600);
   //start the serial thing for messages.
-
 }
 
 void loop() {
-  readSensors();
-  if(y == 10000){
-    //temporary way to not spam transmitions slowed down so i can read stuff.
-    //need to replace the "y" countdown with something fancy to check if the reading 
-    //is different from the previous reading +/- a threshold so it doesn't spam or miss
-    //a turn or change of speed.
+  steeringReading = analogRead(steering) / 4;
+  speedingReading = analogRead(speeding) / 4;
+  //set the current analog reading of the two pots to place place holder variables.
+
+  if (steeringReading != oldSteering){
+    //if steering is different from the old variable.
+    if (steeringReading > oldSteering){
+      int steeringThreshold = steeringReading - oldSteering;
+      if(steeringThreshold > 4){
+        //if the difference is above the threshold, then transmit.
+        //the pots i used are a bit persnickety and bounce up and down a bit.
+        Serial.println("steering change");
+        TXing();
+      }
+    }
+
+    else {
+      int steeringThreshold = oldSteering - steeringReading;
+      if(steeringThreshold > 4){
+        //same thing as above, but since ABS doesn't work, gotta do it somehow.
+        Serial.println("steering change");
+        TXing();
+      }
+    }
+  }
+
+  if(speedingReading != oldSpeeding){
+    //if the speed is different from the old speed variable.
+    if(speedingReading > oldSpeeding){
+      int speedingThreshold = speedingReading - oldSpeeding;
+      if(speedingThreshold > 4){
+        //if it's above the threshold, transmit.
+        Serial.println("speed change");
+        TXing();
+      }
+    }
+
+    else{
+      int speedingThreshold = oldSpeeding - speedingReading;
+      if(speedingThreshold > 4){
+        //same as above.
+        Serial.print("speed change");
+        TXing();
+      }
+    }
+  }
+
+  if (y == 50000){
+    //if it's been a while then send anyway.
     y = 0;
+    Serial.println("too long");
     TXing();
   }
 
   else{
-    y++;
+    y = y + 1;
   }
-
-}
-
-void readSensors(){
-  steeringReading = (analogRead(steering)) / 4;
-  //pot reading is 0-1024, H-bridge chip can only handle 0-256, hence the division by 4.
-  speedingReading = (analogRead(speeding)) / 4;
-
-  Serial.print("steering-"); Serial.print(steeringReading);
-  Serial.print(" speed-"); Serial.println(speedingReading);
 }
 
 void TXing(){
   digitalWrite(LED, HIGH);
   //turn on the light.  
+  Serial.println("sending");
   
   uint8_t radioPacket[10];
   //variable for the transmission.
   //steering, speed, txNum
-  int oldSteering = steeringReading;
-  int oldSpeeding = speedingReading;
+  oldSteering = steeringReading;
+  oldSpeeding = speedingReading;
   //variables to 
 
   radioPacket [0] = oldSteering / 100;
@@ -117,6 +147,8 @@ void TXing(){
   oldSteering = oldSteering - (radioPacket [1] * 10);
   radioPacket [2] = oldSteering;
   //break up the steering variable into pieces and put it into the radio transmission array.
+  oldSteering = steeringReading;
+  //put the old steering back where it was.
 
   radioPacket [3] = oldSpeeding / 100;
   oldSpeeding = oldSpeeding - (radioPacket [3] * 100);
@@ -124,6 +156,8 @@ void TXing(){
   oldSpeeding = oldSpeeding - (radioPacket [3] * 10);
   radioPacket [5] = oldSpeeding;
   // break up the speed variable and put it into the radio transmission array.
+  oldSpeeding = speedingReading;
+  //put the sold speeding variable back to what it should be.
   
   radioPacket [6] = txNum / 1000;
   txNum = txNum - (radioPacket [5] * 1000);
@@ -135,7 +169,6 @@ void TXing(){
   //break up the transmission number and sort it into the transmission array.
   txNum = (radioPacket [6] * 1000) + (radioPacket [7] * 100) + (radioPacket [8] * 10) + radioPacket [9];
   //put the txNum back the way it was.
-  Serial.print("txNum-"); Serial.println(txNum); Serial.println(" ");
 
   Serial.print("sending data: ");
   for(int a = 0; a < 9; a ++){
