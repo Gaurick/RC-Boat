@@ -25,6 +25,8 @@
 #define in4 13
 //determines the direction of spin on the motor.
 
+#define pot A1
+
 #define pixelPin A2
 //pin for the neopixel to "talk" to the driver.
 
@@ -77,13 +79,8 @@ void loop(){
         
         rxSort();
         batteryCheck();
-        motoring();
         rxReply();
 
-        Serial.print("RSSI: ");
-        Serial.println(rf95.lastRssi(), DEC);
-        //print off the strength of the last signal received.
-        
         digitalWrite(LED, LOW);
         //turn off the light.
       }
@@ -100,17 +97,85 @@ void rxSort(){
   steering = buf [0] * 100;
   steering = steering + (buf [1] * 10);
   steering = steering + buf [2];
-  Serial.print("steering-"); Serial.print(steering);
+  //puts the pieces from the buffer into the steering variable.
 
   speeds = buf [3] * 10;
   speeds = speeds + buf [4];
-  Serial.print(" speeds-"); Serial.print(speeds);
+  //puts other pieces from the buffer into the speed variable.
 
   txNum = buf [5] * 1000;
   txNum = txNum + (buf [6] *100);
   txNum = txNum + (buf [7] *10);
   txNum = txNum + buf [8];
-  Serial.print(" txNum-"); Serial.println(txNum);
+  //puts the transmission number from the buffer into a variable.
+
+  setMotor(steering, speeds);
+  //make the motor do stuff.
+}
+
+void setMotor(int receivedSteering, int receivedSpeed){
+  /*so, with the H-bridge chip there are two outputs, one for the propeller and one for the rudder.
+   * 
+   * en1 is the analog speed that the rudder should move.
+   * in1 is one direction of the rudder's movement.
+   * int2 is the other direction. 
+   * 
+   * en2 is the analog speed of the propeller.
+   * in3 is one direction of the propeller.
+   * in4 is the other direction of the propeller.
+   * 
+   * moving the rudder in with 100 for the analog speed per loop seems to be a good balance 
+   * between speed and precision. 
+   */
+  int rudder = analogRead(pot) / 4;
+  //read the pot connected to the rudder, divide it by 4 to make it compatable with the transmission.
+  
+  if(rudder < receivedSteering){
+    //if the rudder's pot says it's not at the target.
+    int rudderThreshold = receivedSteering - rudder;
+    if(rudderThreshold > 4){
+      //if it happens to be above the threshold, then move it.
+      analogWrite(en1, 100);
+      digitalWrite(in1, 1);
+      digitalWrite(in2, 0);
+    }
+  }
+
+  else if(rudder > receivedSteering){
+    //if the rudder's pot says it's off, but in the other direction.
+    int rudderThreshold = rudder - receivedSteering;
+    if(rudderThreshold > 4){
+      //if the difference is above the threshold, move it.
+      analogWrite(en1, 100);
+      digitalWrite(in1, 0);
+      digitalWrite(in2, 1);
+    }
+  }
+
+  else{
+    //if it's close enough, stop moving the rudder.
+    analogWrite(en1, 0);
+    digitalWrite(in1, 0);
+    digitalWrite(in2, 0);
+  }
+
+  if(receivedSpeed < 127){
+    //if the speed is above 127, it should be in reverse.
+    analogWrite(en2, ((127 - receivedSpeed) * 2);
+    //inverse the reading, so that it slows down as you get to the middle of the pot, then hopefully stops.
+    //also double it since you're only using 1/2 of the pot for reverse.
+    digitalWrite(in3, 1);
+    digitalWrite(in4, 0);
+  }
+
+  if(recievedSpeed > 127){
+    //if the speed is above 127, it should be forward.
+    analogWrite(en, ((receivedSpeed - 127) * 2);
+    //so we take the speed, remove the reverse part of the reading, then double it since only 1/2 of the 
+    //pot range is dedicated to the forward speed.
+    digitalWrite(in3, 0);
+    digitalWrite(in4, 1);
+  }
 }
 
 void batteryCheck(){
@@ -128,22 +193,6 @@ void batteryCheck(){
   Serial.print("VBat: " );     
   Serial.println(measuredVbat);
   //print out the results.
-}
-
-void motoring(){
-  //function to make the motor move.
-  analogWrite(en1, 0);
-  digitalWrite(in1, 0);
-  digitalWrite(in2, 0);
-
-  analogWrite(en2, 0);
-  digitalWrite(in3, 0);
-  digitalWrite(in4, 0);
-
-  pixels.setPixelColor(0, 255, 255, 255);
-  //pick the pixel then set the color.
-  pixels.show();
-  //actually make the pixel show the color specified.
 }
 
 void rxReply(){
