@@ -66,6 +66,9 @@ void setup(){
   rf95.setTxPower(23, false);
   //set the power to transmit at.
   //scale is 5 to 23, with 5 being the weakest, 23 being the strongest.
+  pixels.begin();
+  pixels.show();
+  //initialize and turn the pixels off.
   Serial.begin(9600);
   //start the serial thing for messages.
 }
