@@ -71,6 +71,11 @@ void setup(){
 }
 
 void loop(){
+  setMotor(steering, speeds);
+  //make the motor do stuff.
+  batteryCheck();
+  //turn on the light and check the battery voltage.
+  
   if (rf95.available()){
 
       if (rf95.recv(buf, &len)){
@@ -78,7 +83,6 @@ void loop(){
         //got a message, turn on the light.
         
         rxSort();
-        batteryCheck();
         rxReply();
 
         digitalWrite(LED, LOW);
@@ -98,9 +102,11 @@ void rxSort(){
   steering = steering + (buf [1] * 10);
   steering = steering + buf [2];
   //puts the pieces from the buffer into the steering variable.
+  Serial.print("steering-"); Serial.print(steering);
 
-  speeds = buf [3] * 10;
-  speeds = speeds + buf [4];
+  speeds = buf [3] * 100;
+  speeds = speeds + (buf [4] * 10);
+  speeds = speeds + buf [5];
   //puts other pieces from the buffer into the speed variable.
 
   txNum = buf [5] * 1000;
@@ -108,9 +114,6 @@ void rxSort(){
   txNum = txNum + (buf [7] *10);
   txNum = txNum + buf [8];
   //puts the transmission number from the buffer into a variable.
-
-  setMotor(steering, speeds);
-  //make the motor do stuff.
 }
 
 void setMotor(int receivedSteering, int receivedSpeed){
@@ -129,15 +132,29 @@ void setMotor(int receivedSteering, int receivedSpeed){
    */
   int rudder = analogRead(pot) / 4;
   //read the pot connected to the rudder, divide it by 4 to make it compatable with the transmission.
+  Serial.print(" rudder-"); Serial.println(rudder);
+
+  if(receivedSteering < 45){
+    //the rudder can only move so far in either direction.
+    //if the signal says to move too far to the left, the signal is reduced to the maximum it can go.
+    receivedSteering = 45;
+  }
+
+  else if(receivedSteering > 200){
+    //rudder still can't move any further than it can move.
+    //if it's trying to move too far to the right, reduce the signal so it doesn't stutter.
+    receivedSteering = 200;
+  }
   
   if(rudder < receivedSteering){
     //if the rudder's pot says it's not at the target.
     int rudderThreshold = receivedSteering - rudder;
     if(rudderThreshold > 4){
       //if it happens to be above the threshold, then move it.
-      analogWrite(en1, 100);
+      analogWrite(en1, 200);
       digitalWrite(in1, 1);
       digitalWrite(in2, 0);
+      Serial.println("less than");
     }
   }
 
@@ -146,9 +163,10 @@ void setMotor(int receivedSteering, int receivedSpeed){
     int rudderThreshold = rudder - receivedSteering;
     if(rudderThreshold > 4){
       //if the difference is above the threshold, move it.
-      analogWrite(en1, 100);
+      analogWrite(en1, 200);
       digitalWrite(in1, 0);
       digitalWrite(in2, 1);
+      Serial.println("greater than");
     }
   }
 
@@ -157,28 +175,39 @@ void setMotor(int receivedSteering, int receivedSpeed){
     analogWrite(en1, 0);
     digitalWrite(in1, 0);
     digitalWrite(in2, 0);
+    Serial.println("stop");
   }
 
-  if(receivedSpeed < 127){
-    //if the speed is above 127, it should be in reverse.
-    analogWrite(en2, ((127 - receivedSpeed) * 2));
+  if(receivedSpeed < 115){
+    //if the speed is above 115, it should be in reverse.
+    analogWrite(en2, ((115 - receivedSpeed) * 2));
     //inverse the reading, so that it slows down as you get to the middle of the pot, then hopefully stops.
     //also double it since you're only using 1/2 of the pot for reverse.
     digitalWrite(in3, 1);
     digitalWrite(in4, 0);
   }
 
-  if(receivedSpeed > 127){
-    //if the speed is above 127, it should be forward.
-    analogWrite(en2, ((receivedSpeed - 127) * 2));
+  else if(receivedSpeed > 141){
+    //if the speed is above 141, it should be forward.
+    analogWrite(en2, ((receivedSpeed - 141) * 2));
     //so we take the speed, remove the reverse part of the reading, then double it since only 1/2 of the 
     //pot range is dedicated to the forward speed.
     digitalWrite(in3, 0);
     digitalWrite(in4, 1);
   }
+
+  else{
+    //if the pot is in the middle, stop the motor, hopefully.
+    analogWrite(en2, 0);
+    digitalWrite(in3, 0);
+    digitalWrite(in4, 0);
+    //stop it, right?
+  }
 }
 
 void batteryCheck(){
+  pixels.setPixelColor(0, 255, 255, 255);
+  pixels.show();
   //function to check the battery level for the microcontroller.
   measuredVbat = analogRead(VBATPIN);
   //measure the battery voltage.
