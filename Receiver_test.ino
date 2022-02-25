@@ -40,8 +40,11 @@ int steering = 0;
 //variable for rudder position of the boat.
 int speeds = 0;
 //variable for the speed of the boat.
-int txNum= 0;
+int txNum = 0;
 //variable to count the number of transmittions.
+int light = 1;
+//variable to keep track of what the indicator light should be doing.
+//should start off as blue then change to green when all is ok or not ok.
 
 Adafruit_NeoPixel pixels(1, pixelPin, NEO_GRB + NEO_KHZ800);
 //creates the pixels object.
@@ -67,8 +70,10 @@ void setup(){
   //set the power to transmit at.
   //scale is 5 to 23, with 5 being the weakest, 23 being the strongest.
   pixels.begin();
+  pixels.setBrightness(255);
   pixels.show();
   //initialize and turn the pixels off.
+  //also makes the pixel as bright as possible.
   Serial.begin(9600);
   //start the serial thing for messages.
 }
@@ -76,25 +81,31 @@ void setup(){
 void loop(){
   setMotor(steering, speeds);
   //make the motor do stuff.
-  batteryCheck();
+  batteryLight();
   //turn on the light and check the battery voltage.
   
   if (rf95.available()){
 
-      if (rf95.recv(buf, &len)){
-        digitalWrite(LED, HIGH);
-        //got a message, turn on the light.
+    if (rf95.recv(buf, &len)){
+      digitalWrite(LED, HIGH);
+      //got a message, turn on the light.
         
-        rxSort();
-        rxReply();
+      rxSort();
+      rxReply();
 
-        digitalWrite(LED, LOW);
-        //turn off the light.
+      digitalWrite(LED, LOW);
+      //turn off the onboard led.
+      if(light != 2){
+        if(light != 3){
+          light = 4;
+          //turn on the "everything's ok" green light.
+        }
       }
+    }
 
-      else{
-      Serial.println("Receive failed");
-      //if something doesn't work, at least say something.
+    else{
+      light = 2;
+      //set the indicator light to orange if the receiver didn't work or whatever.
     }
   }
 }
@@ -208,10 +219,7 @@ void setMotor(int receivedSteering, int receivedSpeed){
   }
 }
 
-void batteryCheck(){
-  pixels.setPixelColor(0, 255, 255, 255);
-  pixels.show();
-  //function to check the battery level for the microcontroller.
+void batteryLight(){
   measuredVbat = analogRead(VBATPIN);
   //measure the battery voltage.
 
@@ -221,10 +229,41 @@ void batteryCheck(){
   //then multiply it by the reference voltage, 3.3v.
   measuredVbat /= 1024; 
   //convert to voltage(?)
-  
-  Serial.print("VBat: " );     
-  Serial.println(measuredVbat);
-  //print out the results.
+
+  if(measuredVbat < 3.4){
+    light = 3;
+    //if the battery is low, let us know.
+  }
+
+  switch (light){
+    case 1:
+    //startup color, no received stuff yet.
+    pixels.setPixelColor(0, 0, 0, 255);
+    //blue.
+    pixels.show();
+    break;
+
+    case 2:
+    //if there was a signal receive error.
+    pixels.setPixelColor(0, 255, 125, 0);
+    //orange.
+    pixels.show();
+    break;
+
+    case 3:
+    //if the battery is low.
+    pixels.setPixelColor(0, 255, 0, 0);
+    //red.
+    pixels.show();
+    break;
+
+    case 4:
+    //if all is well.
+    pixels.setPixelColor(0, 0, 255, 0);
+    //green.
+    pixels.show();
+    break;    
+  }
 }
 
 void rxReply(){
