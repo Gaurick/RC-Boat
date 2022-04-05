@@ -59,4 +59,39 @@ This document is written in the _AsciiDoc_ format, a markup language to describe
 If you need help you can search the http://www.methods.co.nz/asciidoc[AsciiDoc homepage]
 or consult the http://powerman.name/doc/asciidoc[AsciiDoc cheatsheet]
 
+Websites that helped...
+https://learn.adafruit.com/adafruit-arduino-lesson-15-dc-motor-reversing/lm293d
+site that describes the pinout and function of the L293D chip (H-Bridge motor thing.)
+https://learn.adafruit.com/adafruit-feather-m0-radio-with-lora-radio-module/pinouts
+feather M0 radio with LoRa pinouts and description.
+
+links...
+ * https://cdn-learn.adafruit.com/assets/assets/000/046/254/original/feather_Feather_M0_LoRa_v1.2-1.png?1504886587
+ * feather pinout
+ * https://learn.adafruit.com/adafruit-arduino-lesson-15-dc-motor-reversing
+ * potentiometer and button help
+ * https://learn.adafruit.com/adafruit-feather-m0-radio-with-lora-radio-module/overview
+ * feather and radio tutorial
+ * https://learn.adafruit.com/adafruit-arduino-lesson-13-dc-motors/breadboard-layout
+ * motor on arduino pins
+ * https://www.onsemi.com/pub/Collateral/PN2222A-D.pdf
+ * pn2222a datasheet (transistor used, NPN)
+ * https://www.build-electronic-circuits.com/h-bridge/
+ * h bridge with transistors
+
+
+links...
+ * https://cdn-learn.adafruit.com/assets/assets/000/046/254/original/feather_Feather_M0_LoRa_v1.2-1.png?1504886587
+ * feather pinout
+ * https://learn.adafruit.com/adafruit-arduino-lesson-15-dc-motor-reversing
+ * potentiometer and button help
+ * https://learn.adafruit.com/adafruit-feather-m0-radio-with-lora-radio-module/overview
+ * feather and radio tutorial
+ * https://learn.adafruit.com/adafruit-arduino-lesson-13-dc-motors/breadboard-layout
+ * motor on arduino pins
+ * https://www.onsemi.com/pub/Collateral/PN2222A-D.pdf
+ * pn2222a datasheet (transistor used, NPN)
+ * https://www.build-electronic-circuits.com/h-bridge/
+ * h bridge with transistors
+
 .
