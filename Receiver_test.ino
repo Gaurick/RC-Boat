@@ -1,3 +1,6 @@
+/* outline of code and how it works
+*/
+
 //receiver testing.
 
 #include <SPI.h>
