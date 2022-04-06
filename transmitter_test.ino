@@ -1,21 +1,43 @@
-/*
- * links...
- * https://cdn-learn.adafruit.com/assets/assets/000/046/254/original/feather_Feather_M0_LoRa_v1.2-1.png?1504886587
- * feather pinout
- * https://learn.adafruit.com/adafruit-arduino-lesson-15-dc-motor-reversing
- * potentiometer and button help
- * https://learn.adafruit.com/adafruit-feather-m0-radio-with-lora-radio-module/overview
- * feather and radio tutorial
- * https://learn.adafruit.com/adafruit-arduino-lesson-13-dc-motors/breadboard-layout
- * motor on arduino pins
- * https://www.onsemi.com/pub/Collateral/PN2222A-D.pdf
- * pn2222a datasheet (transistor used, NPN)
- * https://www.build-electronic-circuits.com/h-bridge/
- * h bridge with transistors
+/*  outline of code and how it works
+ *  Before everything...
+ *    Load the libraries to make everything work.
+ *    Define the pins to interact with the radio and potentiometers.
+ *    Create the radio object.
+ *    Make a bunch of global variables because i can.
+ *  Setup time...
+ *    Set the pins to output.
+ *    Startup the radio.
+ *    Begin the serial communications for moral support.
+ *  Looping around...
+ *    Check the potentiometer readings.
+ *    If the steering reading is different, run the transmission function.
+ *    If the speed reading is different, run the transmission function.
+ *    If a few seconds have passed without change, run the transission function.
+ *    Otherwise continue counting.
+ *  End of loop, return to the beginning of the loop.
+ *
+ *  Transmission function
+ *    Turn on the onboard LED.
+ *    Create a trannsmission packet buffer.
+ *    Insert steering potentiometer reading into the transmission buffer.
+ *    Insert speed potentiometer reading into the transission buffer.
+ *    Take the old transmission number and ?re-add it to the transmission buffer?
+ *    Send the packet of data.
+ *    Run the receive function.
+ *      Create a buffer to receive the data.
+ *      Print the data received through the serial moral support output.
+ *      Serial print if there's an error or problem.
+ *    Turn off the onboard LED.
+ *    Increase the transmission number.
  * 
+ *
+ *  TO DO
+ *  actually do something with received errors.
+ *  add in some fancy transmission number checking stuff.
+ *  put in a buzzer or another neopixel to display errors for/from the transmitter.
+ *  try it out in the real world.
+ *  share it with people?
  */
-
-//transmittion testing.
 
 #include <SPI.h>
 #include <RH_RF95.h>
@@ -65,6 +87,7 @@ void setup() {
   rf95.setTxPower(23, false);
   //set the power to transmit at.
   //scale is 5 to 23, with 5 being the weakest, 23 being the strongest.
+  
   Serial.begin(9600);
   //start the serial thing for messages.
 }
