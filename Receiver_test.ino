@@ -1,7 +1,56 @@
 /* outline of code and how it works
+*  Before everything...
+*    Begins with loading the libraries needed to make everything work.
+*    Defines pins used by the feather that won't need to be changed.
+*    Create an objects for the radio and neopixel to do stuff.
+*    Create way too many global variables because i can.
+*  Setup part...
+*    Set pins to output as necessary.
+*    Power up radio.
+*    Start up the lone neopixel.
+*    Begin the serial communications for moral support.
+*  Looping part...
+*    Run the motor function.
+*      Read the potentiometer attached to the rudder for it's position.
+*      Limit the reading based on how far the rudder can move to port or starport.
+*      Check how far out the rudder is from where it should be.
+*      Move the rudder if it should be moved.
+*      Stop the rudder if it's fine.
+*      Then move the propeller motor in the direction it should.
+*      Or stop the propeller if that's what's needed.
+*    Run the battery and neopixel function.
+*      Read the voltage of the battery for the feather.
+*      Convert the analog reading to a voltage number.
+*      Check to see if the battery is low, then set a flag if it is.
+*      Go through a switch case to set the pixel's color to what it should be.
+*        Receiver is working, hasn't received yet is blue.
+*        Receiver has received an incomplete message or has an error is orange.
+*        Receiver's brain battery is low turns the light red.
+*        Receiver is working and receiving is green.
+*    Check to see if the radio is ready to do stuff.
+*      If it received something then put it into the buffer variable.
+*      Run the received sorting function.
+*        Break the buffer into three parts.
+*          Steering value.
+*          Speed value.
+*          Transmission number.
+*      Run the reply function.
+*        Prepare the reply packet.
+*          Put battery voltage reading for the microcontroller's battery into the reply packet.
+*          Put the transmission number into the reply packet.
+*        Send off the packet and wait until it's done sending.
+*      Turn off the onboard LED and if everything is OK set the neopixel to green.
+*      If everything isn't OK then set the error orange flag.
+*  End of loop, return to beginning of loop and do it all again.
+*
+*
+*  TO DO
+*  put in actual transmission number detection/do something with it to check for missing numbers?
+*  slap more neopixels into it for more light and identification of trouble.
+*  test it in the real world.
+*  share it with the real world?
+*  
 */
-
-//receiver testing.
 
 #include <SPI.h>
 #include <RH_RF95.h>
@@ -18,7 +67,6 @@
 //set the pin for the built in led.
 #define VBATPIN A7
 //pin to read the battery voltage.
-
 #define en1 5
 #define en2 6
 //pins that set the speed based on the analog reading.  needs to be between 0 and 255.
@@ -27,15 +75,15 @@
 #define in3 12
 #define in4 13
 //determines the direction of spin on the motor.
-
 #define pot A1
-
 #define pixelPin A2
 //pin for the neopixel to "talk" to the driver.
 
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
 //create the radio object.
 //"Singleton instance"(?).
+Adafruit_NeoPixel pixels(1, pixelPin, NEO_GRB + NEO_KHZ800);
+//creates the pixels object.
 
 int x = 0;
 //create variable for counting the loops.
@@ -48,14 +96,9 @@ int txNum = 0;
 int light = 1;
 //variable to keep track of what the indicator light should be doing.
 //should start off as blue then change to green when all is ok or not ok.
-
-Adafruit_NeoPixel pixels(1, pixelPin, NEO_GRB + NEO_KHZ800);
-//creates the pixels object.
-
 uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
 uint8_t len = sizeof(buf);
 //create a buffer and a variable based on the size of the buffer.
-
 float measuredVbat;
 
 void setup(){
@@ -72,11 +115,13 @@ void setup(){
   rf95.setTxPower(23, false);
   //set the power to transmit at.
   //scale is 5 to 23, with 5 being the weakest, 23 being the strongest.
+  
   pixels.begin();
   pixels.setBrightness(255);
   pixels.show();
   //initialize and turn the pixels off.
   //also makes the pixel as bright as possible.
+  
   Serial.begin(9600);
   //start the serial thing for messages.
 }
